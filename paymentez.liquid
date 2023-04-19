@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Payment Checkout</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://code.jquery.com/jquery-3.5.0.min.js"></script>
+    <script src="https://cdn.paymentez.com/ccapi/sdk/payment_checkout_3.0.0.min.js"></script>
+  </head>
+  <body>
+    <script>
+      let paymentCheckout = new PaymentCheckout.modal({
+        env_mode: "{{ ENV_MODE }}", // `prod`, `stg`, `local` to change environment. Default is `stg`
+        onOpen: function () {
+          console.log("modal open");
+        },
+        onClose: function () {
+          // Verificar si platform es "true"
+          if ("{{platform}}" === "true") {
+            // Si es "true", cerrar la alerta con el mensaje "onClose"
+            closeAlert('onClose');
+          } else {
+            // Si no es "true", enviar mensaje postMessage para cerrar la alerta con el mensaje "onClose"
+            closeAlert.postMessage('onClose');
+          }
+        },
+        onResponse: function (response) {
+            if ("{{platform}}" === "true") {
+          setRequestSate(true);
+            }else{
+          setRequestSate.postMessage(true);
+            }
+          fetch('{{baseUrl}}paymentez/pay/transactions/callback',{
+            method: 'POST',
+            body: JSON.stringify(response),
+            headers: {"Content-type": "application/json; charset=UTF-8"}
+          })
+          .then( resp => resp.json())
+          .then( json => {
+            console.log(json);
+            // Verificar si platform es "true"
+            if ("{{platform}}" === "true") {
+              // Si es "true", enviar mensaje userMessage con el JSON de respuesta y cerrar la alerta con el mensaje "onClose"
+              userMessage(JSON.stringify(json));
+              closeAlert('close');
+            } else {
+              // Si no es "true", enviar mensaje postMessage para cerrar la alerta con el mensaje "close" y enviar mensaje postMessage con el JSON de respuesta
+              userMessage.postMessage(JSON.stringify(json));
+              closeAlert.postMessage('close');
+            }
+            {% comment %} TODO check response {% endcomment %}
+          })
+          .catch( err => console.log('====',err));
+          console.log(response);
+        }
+      });
+
+      paymentCheckout.open({
+        reference: '{{reference}}', // reference received for Payment Gateway
+      });
+
+      window.addEventListener('popstate', function () {
+        paymentCheckout.close();
+      });
+    </script>
+  </body>
+</html>
